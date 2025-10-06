@@ -4,3 +4,5 @@
 /// not database models (because this is the structure that we are using for request and response, the database model
 /// structure is used for storage and retrieval of data)
 pub mod user_schemas;
+
+pub use user_schemas::{CreateUserRequest, UpdateUserRequest, UserResponse};
