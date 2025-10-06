@@ -21,8 +21,8 @@ async fn main() {
     println!("Connected to database successfully!");
 
     let app = Router::new()
-        .with_state(app_state)
-        .route("/health", get(health_check));
+        .route("/health", get(health_check))
+        .with_state(app_state);
 
     let listener = tokio::net::TcpListener::bind(&bind_addr).await.unwrap();
 
