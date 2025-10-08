@@ -3,15 +3,40 @@ name = "rw-axum-api"
 version = "0.1.0"
 edition = "2024"
 
+[lib]
+name = "rw_axum_api"
+path = "src/lib.rs"
+
+[[bin]]
+name = "rw-axum-api"
+path = "src/main.rs"
+
 [dependencies]
+# core web
 axum = { version = "0.8.6", features = ["macros"] }
 tokio = { version = "1.47.1", features = ["full"] }
+
+# database
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
-uuid = { version = "1.0", features = ["v4", "serde"] }
-chrono = { version = "0.4", features = ["serde"] }
+
+# serialization
 serde = { version = "1.0.228", features = ["derive"] }
 serde_json = "1.0.145"
+
+# validation
 validator = { version = "0.20", features = ["derive"] }
+
+# UUID and time
+uuid = { version = "1.0", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+
+# configuration
 dotenvy = "0.15"
+
+# auth
+async-trait = "0.1.63"
 bcrypt = "0.17.1"
 jsonwebtoken = { version = "10.0.0", features = ["aws_lc_rs"] }
+
+# email sending
+lettre = { version = "0.11", features = ["tokio1-native-tls", "builder", "hostname"] }
