@@ -9,11 +9,8 @@ use std::env;
 
 use axum::{Router, routing::get, routing::post};
 
-use crate::{
-    handlers::{
-        auth::{current_user, login, register},
-        health::health_check,
-    },
+use rw_axum_api::{
+    handlers::{current_user, health_check, login, register},
     state::AppState,
 };
 

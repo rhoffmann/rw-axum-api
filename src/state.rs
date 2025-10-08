@@ -1,12 +1,14 @@
+use std::sync::Arc;
+
 use axum::extract::FromRef;
 use sqlx::PgPool;
 
-use crate::repositories::UserRepository;
+use crate::repositories::{UserRepository, UserRepositoryTrait};
 
 #[derive(Clone, FromRef)]
 pub struct AppState {
     pub db: PgPool,
-    pub user_repository: UserRepository,
+    pub user_repository: Arc<dyn UserRepositoryTrait>,
 }
 
 impl AppState {
@@ -17,7 +19,8 @@ impl AppState {
         // run pending migrations
         sqlx::migrate!("./migrations").run(&db).await?;
 
-        let user_repository = UserRepository::new(db.clone());
+        let user_repository: Arc<dyn UserRepositoryTrait> =
+            Arc::new(UserRepository::new(db.clone()));
 
         Ok(Self {
             db,
