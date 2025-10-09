@@ -83,7 +83,6 @@ pub async fn login(
         .ok_or(StatusCode::UNAUTHORIZED)?;
 
     // check for password validity
-
     let valid_password = verify_password(&payload.user.password, &user.password_hash)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 

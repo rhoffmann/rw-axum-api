@@ -1,7 +1,8 @@
 use async_trait::async_trait;
+use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::models::User;
+use crate::models::{EmailVerificationToken, User};
 
 #[async_trait]
 pub trait UserRepositoryTrait: Send + Sync {
@@ -26,4 +27,23 @@ pub trait UserRepositoryTrait: Send + Sync {
         bio: Option<&str>,
         image: Option<&str>,
     ) -> Result<Option<User>, sqlx::Error>;
+}
+
+#[async_trait]
+pub trait EmailVerificationRepositoryTrait: Send + Sync {
+    async fn generate_token(
+        &self,
+        user_id: Uuid,
+        token: &str,
+        expires_at: DateTime<Utc>,
+    ) -> Result<EmailVerificationToken, sqlx::Error>;
+
+    async fn find_by_token(
+        &self,
+        token: &str,
+    ) -> Result<Option<EmailVerificationToken>, sqlx::Error>;
+
+    async fn delete_token(&self, token: &str) -> Result<(), sqlx::Error>;
+
+    async fn verify_user_email(&self, user_id: Uuid) -> Result<(), sqlx::Error>;
 }
