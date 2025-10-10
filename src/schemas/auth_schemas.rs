@@ -48,6 +48,7 @@ pub struct UserData {
     pub token: String,         // always add jwt token
     pub bio: String,           // empty string if none in db
     pub image: Option<String>, // null in json if none
+    pub email_verified: bool,
 }
 
 impl UserData {
@@ -58,6 +59,7 @@ impl UserData {
             username: user.username,
             bio: user.bio.unwrap_or_default(),
             image: user.image,
+            email_verified: user.email_verified,
         }
     }
 }

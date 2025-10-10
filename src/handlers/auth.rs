@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use axum::{Json, extract::State, http::StatusCode};
 use chrono::{Duration, Utc};
 use validator::Validate;
@@ -135,4 +137,48 @@ pub async fn current_user(
     let response = UserResponse { user: user_data };
 
     Ok(Json(response))
+}
+
+pub async fn verify_email(
+    State(state): State<AppState>,
+    axum::extract::Query(params): axum::extract::Query<HashMap<String, String>>,
+) -> Result<Json<serde_json::Value>, StatusCode> {
+    let token = params.get("token").ok_or(StatusCode::BAD_REQUEST)?;
+
+    // look for token in DB
+    let verification_token = state
+        .email_verification_repository
+        .find_by_token(token)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    // check if expired
+    if verification_token.is_expired() {
+        // clean expired token
+        state
+            .email_verification_repository
+            .delete_token(token)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        return Err(StatusCode::GONE);
+    }
+
+    // mark user as verified
+    state
+        .email_verification_repository
+        .verify_user_email(verification_token.user_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    state
+        .email_verification_repository
+        .delete_token(token)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(
+        serde_json::json!({"message": "Email verified successfully!"}),
+    ))
 }
