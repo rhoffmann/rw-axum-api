@@ -31,7 +31,7 @@ pub trait UserRepositoryTrait: Send + Sync {
 
 #[async_trait]
 pub trait EmailVerificationRepositoryTrait: Send + Sync {
-    async fn generate_token(
+    async fn create_token(
         &self,
         user_id: Uuid,
         token: &str,

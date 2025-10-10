@@ -3,7 +3,9 @@ mod handlers;
 mod models;
 mod repositories;
 mod schemas;
+mod services;
 mod state;
+mod utils;
 
 use std::env;
 

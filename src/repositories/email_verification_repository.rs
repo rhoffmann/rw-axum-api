@@ -18,7 +18,7 @@ impl EmailVerificationRepository {
 
 #[async_trait]
 impl EmailVerificationRepositoryTrait for EmailVerificationRepository {
-    async fn generate_token(
+    async fn create_token(
         &self,
         user_id: Uuid,
         token: &str,
