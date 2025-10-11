@@ -10,7 +10,10 @@ use crate::{
         middleware::RequireAuth,
         password::{hash_password, verify_password},
     },
-    schemas::{LoginUserRequest, RegisterUserRequest, UserData, auth_schemas::UserResponse},
+    schemas::{
+        ForgotPasswordRequest, ForgotPasswordResponse, LoginUserRequest, RegisterUserRequest,
+        ResetPasswordRequest, ResetPasswordResponse, UserData, auth_schemas::UserResponse,
+    },
     state::AppState,
     utils::generate_verification_token,
 };
@@ -181,4 +184,102 @@ pub async fn verify_email(
     Ok(Json(
         serde_json::json!({"message": "Email verified successfully!"}),
     ))
+}
+
+// forgot password - generate token and send email
+pub async fn forgot_password(
+    State(state): State<AppState>,
+    Json(payload): Json<ForgotPasswordRequest>,
+) -> Result<Json<ForgotPasswordResponse>, StatusCode> {
+    payload.validate().map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    // look up user by that email
+    let user = state
+        .user_repository
+        .find_by_email(&payload.email)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    if user.is_none() {
+        return Ok(Json(ForgotPasswordResponse {
+            message: "If that email exists, a password reset link has been sent".to_string(),
+        }));
+    }
+
+    let user = user.unwrap();
+
+    // create reset token
+    let reset_token = generate_verification_token();
+    let expires_at = Utc::now() + Duration::hours(1); // 1h expiration
+
+    // save token to db
+    state
+        .password_reset_respository
+        .create_token(user.id, &reset_token, expires_at)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // send email
+    state
+        .email_service
+        .send_password_reset_email(&user.email, &user.username, &reset_token)
+        .await
+        .map_err(|e| {
+            eprintln!("Failed to sent password reset {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR
+        })?;
+
+    Ok(Json(ForgotPasswordResponse {
+        message: "If that email exists, a password reset link has been sent".to_string(),
+    }))
+}
+
+pub async fn reset_password(
+    State(state): State<AppState>,
+    Json(payload): Json<ResetPasswordRequest>,
+) -> Result<Json<ResetPasswordResponse>, StatusCode> {
+    payload.validate().map_err(|_| StatusCode::BAD_REQUEST)?;
+
+    // find password reset by token
+    let reset_token = state
+        .password_reset_respository
+        .find_by_token(&payload.token)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    // check if token is expired
+    if reset_token.is_expired() {
+        // clean up the token
+        state
+            .password_reset_respository
+            .delete_token(&payload.token)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        return Err(StatusCode::GONE);
+    }
+
+    // create new password hash
+    let new_password_hash =
+        hash_password(&payload.new_password).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // reset the token via user_repository
+    state
+        .user_repository
+        .reset_password(reset_token.user_id, &new_password_hash)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // delete all other reset tokens
+    state
+        .password_reset_respository
+        .delete_all_user_tokens(reset_token.user_id)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(ResetPasswordResponse {
+        message: "Password has been reset successfully. You can now log in with your new password"
+            .to_string(),
+    }))
 }

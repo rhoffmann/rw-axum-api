@@ -84,6 +84,22 @@ impl UserRepositoryTrait for UserRepository {
         Ok(user)
     }
 
+    async fn reset_password(&self, id: Uuid, password_hash: &str) -> Result<(), sqlx::Error> {
+        sqlx::query(
+            r#"
+            UPDATE users
+            SET password_hash = $2
+            WHERE id = $1
+            "#,
+        )
+        .bind(id)
+        .bind(password_hash)
+        .execute(&self.db)
+        .await?;
+
+        Ok(())
+    }
+
     async fn update(
         &self,
         id: Uuid,
@@ -94,7 +110,7 @@ impl UserRepositoryTrait for UserRepository {
     ) -> Result<Option<User>, sqlx::Error> {
         let user = sqlx::query_as::<_, User>(
             r#"
-            UPDATE useres
+            UPDATE users
             SET username = COALESCE($2, username),
                 email = COALESCE($3, email),
                 bio = COALESCE($4, bio),
