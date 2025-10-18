@@ -23,7 +23,7 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
             r#"
             INSERT INTO refresh_tokens (user_id, token)
             VALUES ($1, $2)
-            RETURNING id, user_id, token, created_at, last_visited_at
+            RETURNING id, user_id, token, created_at, last_used_at
             "#,
         )
         .bind(user_id)
@@ -53,7 +53,7 @@ impl RefreshTokenRepositoryTrait for RefreshTokenRepository {
     async fn find_by_token(&self, token: &str) -> Result<Option<RefreshToken>, sqlx::Error> {
         let refresh_token = sqlx::query_as::<_, RefreshToken>(
             r#"
-            SELECT id, user_id, token, created_at, last_visited_at
+            SELECT id, user_id, token, created_at, last_used_at
             FROM refresh_tokens
             WHERE token = $1
             "#,

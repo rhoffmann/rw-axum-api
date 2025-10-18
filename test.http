@@ -1,0 +1,31 @@
+### health
+GET http://localhost:4000/health
+
+### login
+# @name loginRequest
+POST http://localhost:4000/api/users/login
+Content-Type: application/json
+
+{
+    "user": {
+      "email": "test2@test.com",
+      "password": "test12345"
+    }
+}
+
+### get current user (using captured token)
+GET http://localhost:4000/api/user
+Authorization: Token {{loginRequest.response.body.access_token}}
+
+### refresh token
+# @name refreshRequest
+POST http://localhost:4000/api/auth/refresh
+Content-Type: application/json
+
+{
+    "refresh_token": "{{loginRequest.response.body.refresh_token}}"
+}
+
+### get current user (using captured token)
+GET http://localhost:4000/api/user
+Authorization: Token {{refreshRequest.response.body.access_token}}
