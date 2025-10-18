@@ -1,4 +1,4 @@
 pub mod jwt;
 pub mod middleware;
 pub mod password;
-pud mod tokens;
+pub mod tokens;
