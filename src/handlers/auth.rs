@@ -13,8 +13,8 @@ use crate::{
     },
     schemas::{
         ForgotPasswordRequest, ForgotPasswordResponse, LoginUserRequest, LoginUserResponse,
-        RegisterUserRequest, ResetPasswordRequest, ResetPasswordResponse, UserData,
-        auth_schemas::UserResponse,
+        RefreshTokenRequest, RefreshTokenResponse, RegisterUserRequest, ResetPasswordRequest,
+        ResetPasswordResponse, UserData, auth_schemas::UserResponse,
     },
     state::AppState,
     utils::generate_verification_token,
@@ -180,9 +180,10 @@ pub async fn login(
 pub async fn current_user(
     RequireAuth(user): RequireAuth,
 ) -> Result<Json<UserResponse>, StatusCode> {
-    // build the response
-    let user_data = UserData::from_user(user);
-    let response = UserResponse { user: user_data };
+    // no token needed, already provided from login/register
+    let response = UserResponse {
+        user: UserData::from_user(user),
+    };
 
     Ok(Json(response))
 }
@@ -327,4 +328,31 @@ pub async fn reset_password(
         message: "Password has been reset successfully. You can now log in with your new password"
             .to_string(),
     }))
+}
+
+pub async fn refresh_token(
+    State(state): State<AppState>,
+    Json(payload): Json<RefreshTokenRequest>,
+) -> Result<Json<RefreshTokenResponse>, StatusCode> {
+    // check for the provided refresh token
+    let refresh_token = state
+        .refresh_token_repository
+        .find_by_token(&payload.refresh_token)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+        .ok_or(StatusCode::UNAUTHORIZED)?;
+
+    // update the last accessed date
+    state
+        .refresh_token_repository
+        .update_last_used_at(&refresh_token.token)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let jwt_secret = std::env::var("JWT_SECRET").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+    let access_token = generate_token(&refresh_token.user_id, &jwt_secret)
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // return new access token
+    Ok(Json(RefreshTokenResponse { access_token }))
 }
