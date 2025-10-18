@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use chrono::{DateTime, Utc};
 use uuid::Uuid;
 
-use crate::models::{EmailVerificationToken, PasswordResetToken, User};
+use crate::models::{EmailVerificationToken, PasswordResetToken, RefreshToken, User};
 
 #[async_trait]
 pub trait UserRepositoryTrait: Send + Sync {
@@ -64,6 +64,19 @@ pub trait PasswordResetRepositoryTrait: Send + Sync {
     ) -> Result<PasswordResetToken, sqlx::Error>;
 
     async fn find_by_token(&self, token: &str) -> Result<Option<PasswordResetToken>, sqlx::Error>;
+
+    async fn delete_token(&self, token: &str) -> Result<(), sqlx::Error>;
+
+    async fn delete_all_user_tokens(&self, user_id: Uuid) -> Result<(), sqlx::Error>;
+}
+
+#[async_trait]
+pub trait RefreshTokenRepositoryTrait: Send + Sync {
+    async fn create_token(&self, user_id: Uuid, token: &str) -> Result<RefreshToken, sqlx::Error>;
+
+    async fn find_by_token(&self, token: &str) -> Result<Option<RefreshToken>, sqlx::Error>;
+
+    async fn last_used_at(&self, token: &str) -> Result<(), sqlx::Error>;
 
     async fn delete_token(&self, token: &str) -> Result<(), sqlx::Error>;
 
