@@ -37,6 +37,13 @@ pub struct LoginUserData {
 }
 
 #[derive(Debug, Serialize)]
+pub struct LoginUserResponse {
+    pub user: UserData,
+    pub access_token: String,
+    pub refresh_token: String,
+}
+
+#[derive(Debug, Serialize)]
 pub struct UserResponse {
     pub user: UserData,
 }
@@ -45,17 +52,15 @@ pub struct UserResponse {
 pub struct UserData {
     pub email: String,
     pub username: String,
-    pub token: String,         // always add jwt token
     pub bio: String,           // empty string if none in db
     pub image: Option<String>, // null in json if none
     pub email_verified: bool,
 }
 
 impl UserData {
-    pub fn from_user_with_token(user: crate::models::User, token: String) -> Self {
+    pub fn from_user(user: crate::models::User) -> Self {
         Self {
             email: user.email,
-            token,
             username: user.username,
             bio: user.bio.unwrap_or_default(),
             image: user.image,

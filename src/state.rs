@@ -6,7 +6,8 @@ use sqlx::PgPool;
 use crate::{
     repositories::{
         EmailVerificationRepository, EmailVerificationRepositoryTrait, PasswordResetRepository,
-        PasswordResetRepositoryTrait, UserRepository, UserRepositoryTrait,
+        PasswordResetRepositoryTrait, RefreshTokenRepository, RefreshTokenRepositoryTrait,
+        UserRepository, UserRepositoryTrait,
     },
     services::EmailService,
 };
@@ -18,6 +19,7 @@ pub struct AppState {
     pub email_verification_repository: Arc<dyn EmailVerificationRepositoryTrait>,
     pub password_reset_respository: Arc<dyn PasswordResetRepositoryTrait>,
     pub email_service: Arc<EmailService>,
+    pub refresh_token_repository: Arc<dyn RefreshTokenRepositoryTrait>,
 }
 
 impl AppState {
@@ -37,14 +39,24 @@ impl AppState {
         let password_reset_respository: Arc<dyn PasswordResetRepositoryTrait> =
             Arc::new(PasswordResetRepository::new(db.clone()));
 
-        let email_service: Arc<EmailService> =
-            Arc::new(EmailService::new().expect("Failed to initialize email service"));
+        let refresh_token_repository: Arc<dyn RefreshTokenRepositoryTrait> =
+            Arc::new(RefreshTokenRepository::new(db.clone()));
+
+        let email_service: Arc<EmailService> = match EmailService::new() {
+            Ok(service) => Arc::new(service),
+            Err(e) => {
+                eprintln!("Failed to initialize email service: {}", e);
+                eprintln!("Make sure all SMTP env vars are set in .env");
+                panic!("Email service initialization failed");
+            }
+        };
 
         Ok(Self {
             db,
             user_repository,
             email_verification_repository,
             password_reset_respository,
+            refresh_token_repository,
             email_service,
         })
     }

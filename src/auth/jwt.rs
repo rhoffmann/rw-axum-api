@@ -12,8 +12,8 @@ pub struct Claims {
 
 pub fn generate_token(user_id: &Uuid, secret: &str) -> Result<String, jsonwebtoken::errors::Error> {
     let now = Utc::now();
-    // TODO: shorter revocation period with refresh tokens
-    let exp = (now + Duration::hours(24)).timestamp() as usize;
+    // changed from 24h to 15min when using refresh tokens
+    let exp = (now + Duration::minutes(15)).timestamp() as usize;
     let iat = now.timestamp() as usize;
 
     let claims = Claims {
