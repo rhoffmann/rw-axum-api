@@ -76,7 +76,7 @@ pub trait RefreshTokenRepositoryTrait: Send + Sync {
 
     async fn find_by_token(&self, token: &str) -> Result<Option<RefreshToken>, sqlx::Error>;
 
-    async fn last_used_at(&self, token: &str) -> Result<(), sqlx::Error>;
+    async fn update_last_used_at(&self, token: &str) -> Result<(), sqlx::Error>;
 
     async fn delete_token(&self, token: &str) -> Result<(), sqlx::Error>;
 
