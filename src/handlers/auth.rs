@@ -13,8 +13,9 @@ use crate::{
     },
     schemas::{
         ForgotPasswordRequest, ForgotPasswordResponse, LoginUserRequest, LoginUserResponse,
-        RefreshTokenRequest, RefreshTokenResponse, RegisterUserRequest, ResetPasswordRequest,
-        ResetPasswordResponse, UserData, auth_schemas::UserResponse,
+        LogoutRequest, LogoutResponse, RefreshTokenRequest, RefreshTokenResponse,
+        RegisterUserRequest, ResetPasswordRequest, ResetPasswordResponse, UserData,
+        auth_schemas::UserResponse,
     },
     state::AppState,
     utils::generate_verification_token,
@@ -334,7 +335,7 @@ pub async fn refresh_token(
     State(state): State<AppState>,
     Json(payload): Json<RefreshTokenRequest>,
 ) -> Result<Json<RefreshTokenResponse>, StatusCode> {
-    // check for the provided refresh token
+    // 1. check for the provided refresh token
     let refresh_token = state
         .refresh_token_repository
         .find_by_token(&payload.refresh_token)
@@ -342,17 +343,93 @@ pub async fn refresh_token(
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
         .ok_or(StatusCode::UNAUTHORIZED)?;
 
-    // update the last accessed date
+    // 2. check if token is expired
+    if refresh_token.is_expired() {
+        let _ = state
+            .refresh_token_repository
+            .delete_token(&payload.refresh_token)
+            .await;
+
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    // 3. REUSE DETECTION - check if token was already used before
+    if refresh_token.is_used {
+        // SECURITY BREACH DETECTED! (probably)
+        // Someone is using an old token, which means it was probably stolen
+        eprintln!("TOKEN REUSE DETECTED!");
+        eprintln!("Token: {}", &payload.refresh_token);
+        eprintln!("User ID: {}", refresh_token.user_id);
+        eprintln!("Originally used at: {:?}", refresh_token.used_at);
+
+        // KILL ALL user's refresh tokens and force them to login again
+        state
+            .refresh_token_repository
+            .delete_all_user_tokens(refresh_token.user_id)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        let user = state
+            .user_repository
+            .find_by_id(refresh_token.user_id)
+            .await
+            .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?
+            .ok_or(StatusCode::INTERNAL_SERVER_ERROR)?;
+
+        if let Err(e) = state
+            .email_service
+            .send_security_alert(&user.email, &user.username)
+            .await
+        {
+            eprintln!("Failed to send security alert email: {}", e);
+            // don't fail the request if email fails
+        }
+
+        return Err(StatusCode::UNAUTHORIZED);
+    }
+
+    // 4. mark old token as used
     state
         .refresh_token_repository
-        .update_last_used_at(&refresh_token.token)
+        .mark_token_as_used(&payload.refresh_token)
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 5. generate new refresh token
+    let new_refresh_token = generate_refresh_token();
+
+    state
+        .refresh_token_repository
+        .create_token(refresh_token.user_id, &new_refresh_token)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    // 6. generate new access token
 
     let jwt_secret = std::env::var("JWT_SECRET").map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
     let access_token = generate_token(&refresh_token.user_id, &jwt_secret)
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
-    // return new access token
-    Ok(Json(RefreshTokenResponse { access_token }))
+    // 7. return BOTH new access token and new refresh token
+    Ok(Json(RefreshTokenResponse {
+        access_token,
+        refresh_token: new_refresh_token,
+    }))
+}
+
+pub async fn logout(
+    State(state): State<AppState>,
+    Json(payload): Json<LogoutRequest>,
+) -> Result<Json<LogoutResponse>, StatusCode> {
+    // simply delete refresh token in payload from database
+
+    state
+        .refresh_token_repository
+        .delete_token(&payload.refresh_token)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    Ok(Json(LogoutResponse {
+        message: "Logged out successfully".to_string(),
+    }))
 }

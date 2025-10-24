@@ -81,4 +81,6 @@ pub trait RefreshTokenRepositoryTrait: Send + Sync {
     async fn delete_token(&self, token: &str) -> Result<(), sqlx::Error>;
 
     async fn delete_all_user_tokens(&self, user_id: Uuid) -> Result<(), sqlx::Error>;
+
+    async fn mark_token_as_used(&self, token: &str) -> Result<(), sqlx::Error>;
 }
