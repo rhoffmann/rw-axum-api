@@ -10,10 +10,10 @@ use rw_axum_api::{
         current_user, forgot_password, health_check, login, logout, refresh_token, register,
         reset_password, verify_email,
     },
-    routers::spa_fallback,
+    routers::create_static_asset_router,
     state::AppState,
 };
-use tower_http::{services::ServeDir, trace::TraceLayer};
+use tower_http::trace::TraceLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[tokio::main]
@@ -34,16 +34,6 @@ async fn main() {
 
     println!("Connected to database successfully!");
 
-    let asset_router = Router::new()
-        .nest_service(
-            "/web",
-            ServeDir::new(&app_state.static_asset_dir).append_index_html_on_directories(true),
-        )
-        .fallback(spa_fallback)
-        .layer(TraceLayer::new_for_http());
-
-    println!("Serving static assets from: {}", app_state.static_asset_dir);
-
     let api = Router::new()
         .route("/users", post(register))
         .route("/users/login", post(login))
@@ -57,8 +47,8 @@ async fn main() {
     let app = Router::new()
         // health check
         .route("/health", get(health_check))
-        // serve SPA
-        .merge(asset_router)
+        // serve static assets
+        .merge(create_static_asset_router(&app_state.static_asset_dir))
         // api
         .nest("/api", api)
         .with_state(app_state)
