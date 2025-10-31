@@ -1,16 +1,10 @@
 use std::env;
 
-use axum::{
-    Router,
-    routing::{get, post},
-};
+use axum::{Router, routing::get};
 
 use rw_axum_api::{
-    handlers::{
-        current_user, forgot_password, health_check, login, logout, refresh_token, register,
-        reset_password, verify_email,
-    },
-    routers::create_static_asset_router,
+    handlers::health_check,
+    routers::{auth_routes, create_static_asset_router, user_routes},
     state::AppState,
 };
 use tower_http::trace::TraceLayer;
@@ -34,23 +28,18 @@ async fn main() {
 
     println!("Connected to database successfully!");
 
-    let api = Router::new()
-        .route("/users", post(register))
-        .route("/users/login", post(login))
-        .route("/user", get(current_user))
-        .route("/auth/verify-email", get(verify_email))
-        .route("/auth/forgot-password", post(forgot_password))
-        .route("/auth/reset-password", post(reset_password))
-        .route("/auth/refresh", post(refresh_token))
-        .route("/auth/logout", post(logout));
-
     let app = Router::new()
         // health check
         .route("/health", get(health_check))
+        // api
+        .nest(
+            "/api",
+            Router::new()
+                .merge(user_routes())
+                .nest("/auth", auth_routes()),
+        )
         // serve static assets
         .merge(create_static_asset_router(&app_state.static_asset_dir))
-        // api
-        .nest("/api", api)
         .with_state(app_state)
         .layer(TraceLayer::new_for_http());
 
