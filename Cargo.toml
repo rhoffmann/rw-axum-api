@@ -16,6 +16,7 @@ path = "src/main.rs"
 axum = { version = "0.8.6", features = ["macros"] }
 axum-extra = "0.10.3"
 tokio = { version = "1.47.1", features = ["full"] }
+tower-http = { version = "0.6.6", features = ["fs", "trace"] }
 
 # database
 sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "migrate"] }
@@ -41,5 +42,6 @@ jsonwebtoken = { version = "10.0.0", features = ["aws_lc_rs"] }
 
 # email sending
 lettre = { version = "0.11", features = ["tokio1-native-tls", "builder", "hostname"] }
-tower-http = { version = "0.6.6", features = ["fs", "trace"] }
+
+# logging and tracing
 tracing-subscriber = "0.3.20"
