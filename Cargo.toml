@@ -45,3 +45,6 @@ lettre = { version = "0.11", features = ["tokio1-native-tls", "builder", "hostna
 
 # logging and tracing
 tracing-subscriber = "0.3.20"
+
+# templating
+askama = "0.14.0"

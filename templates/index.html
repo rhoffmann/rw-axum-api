@@ -1,0 +1,41 @@
+<html>
+    <head>
+        <title>{{ app_name }}</title>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <link
+            rel="stylesheet"
+            href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+        />
+        <!--<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.8/dist/htmx.min.js"></script>-->
+        <link rel="stylesheet" href="./style.css" />
+        <script src="./app.js" defer></script>
+    </head>
+    <body class="app">
+        <div class="container mt-5">
+            <h1 class="mb-4">Welcome to {{ app_name }}</h1>
+            <p>
+                This is a simple static HTML page served by the {{ app_name }}.
+            </p>
+        </div>
+        <div class="container">
+            <h2>Login</h2>
+            <form id="loginForm">
+                <div>
+                    <label for="username">Email:</label>
+                    <input type="text" id="email" name="email" required />
+                </div>
+                <div>
+                    <label for="password">Password:</label>
+                    <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        required
+                    />
+                </div>
+                <button type="submit">Login</button>
+            </form>
+        </div>
+    </body>
+</html>

@@ -3,7 +3,7 @@ use std::env;
 use axum::{Router, routing::get};
 
 use rw_axum_api::{
-    handlers::health_check,
+    handlers::{health_check, root_handler},
     routers::{auth_routes, create_static_asset_router, user_routes},
     state::AppState,
 };
@@ -29,6 +29,7 @@ async fn main() {
     println!("Connected to database successfully!");
 
     let app = Router::new()
+        .route("/", get(root_handler))
         // health check
         .route("/health", get(health_check))
         // api

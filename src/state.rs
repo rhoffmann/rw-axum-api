@@ -1,7 +1,6 @@
-use std::{env, sync::Arc};
-
-use axum::extract::FromRef;
 use sqlx::PgPool;
+
+use std::{env, sync::Arc};
 
 use crate::{
     repositories::{
@@ -12,9 +11,10 @@ use crate::{
     services::EmailService,
 };
 
-#[derive(Clone, FromRef)]
+#[derive(Clone)]
 pub struct AppState {
     pub db: PgPool,
+    pub app_name: String,
     pub static_asset_dir: String,
     pub user_repository: Arc<dyn UserRepositoryTrait>,
     pub email_verification_repository: Arc<dyn EmailVerificationRepositoryTrait>,
@@ -30,6 +30,8 @@ impl AppState {
 
         let static_asset_dir =
             env::var("STATIC_ASSET_DIR").unwrap_or_else(|_| "./frontend".to_string());
+
+        let app_name = env::var("APP_NAME").unwrap_or_else(|_| "RW Axum API".to_string());
 
         // run pending migrations
         sqlx::migrate!("./migrations").run(&db).await?;
@@ -57,6 +59,7 @@ impl AppState {
 
         Ok(Self {
             db,
+            app_name,
             static_asset_dir,
             user_repository,
             email_verification_repository,
