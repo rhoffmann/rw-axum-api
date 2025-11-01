@@ -1,6 +1,6 @@
 window.addEventListener("load", init);
 
-var Session = {
+const Session = Object.seal({
   save: function (data) {
     localStorage.setItem("session", JSON.stringify(data));
   },
@@ -11,7 +11,7 @@ var Session = {
   clear: function () {
     localStorage.removeItem("session");
   },
-};
+});
 
 function init() {
   console.log("App initializing...");
